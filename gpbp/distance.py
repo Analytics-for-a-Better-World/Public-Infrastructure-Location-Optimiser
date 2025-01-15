@@ -16,6 +16,7 @@ import pickle
 from functools import wraps
 import hashlib
 
+
 def disk_cache(cache_dir="cache"):
     def decorator(func):
         @wraps(func)
@@ -32,22 +33,22 @@ def disk_cache(cache_dir="cache"):
 
             # Check if the cache file exists
             if os.path.exists(filename):
-                with open(filename, 'rb') as f:
+                with open(filename, "rb") as f:
                     return pickle.load(f)
             else:
                 # Call the function and cache its result
                 result = func(*args, **kwargs)
-                with open(filename, 'wb') as f:
+                with open(filename, "wb") as f:
                     pickle.dump(result, f)
                 return result
+
         return wrapper
+
     return decorator
 
 
 def _get_poly_nx(G: nx.MultiDiGraph, road_node, dist_value, distance_type):
-    subgraph = nx.ego_graph(
-        G, road_node, radius=dist_value, distance=distance_type
-    )
+    subgraph = nx.ego_graph(G, road_node, radius=dist_value, distance=distance_type)
 
     node_points = [
         Point((data["x"], data["y"])) for node, data in subgraph.nodes(data=True)
@@ -81,7 +82,7 @@ def _get_poly_pandana(G: pandana.Network, road_node, dist_value, distance_type):
     return nodes_gdf, edges_gdf
 
 
-def calculate_isopolygons_graph(    
+def calculate_isopolygons_graph(
     X: Any,
     Y: Any,
     distance_type: str,
@@ -94,13 +95,27 @@ def calculate_isopolygons_graph(
     """
     Catalina, Jan 15 2025:
 
-    The function first finds the nearest network nodes to input coordinates, then
+    The function first finds the nearest network nodes to the input coordinates, then
     constructs polygons representing areas reachable within each specified distance value.
 
-    Since Pandana networks are not implemented, I simplified the function so it supports only NetworkX. 
+
+    For example:
+
+    calculate_isopolygons_graph(
+        X = -122.2313
+        Y = 37.76871,
+        distance_type = 'time',
+        distance_values = [30], # time in minutes
+        road_network = a_road_network
+    )
+
+    represents the area (Polygon) reachable from point (X,Y) within 30 minutes.
+
+
+    Since Pandana networks are not implemented, I simplified the function so it supports only NetworkX.
     Pandana networks will be implemented elsewhere.
 
-    
+
     Returns
     -------
     dict
@@ -108,7 +123,6 @@ def calculate_isopolygons_graph(
         (or single polygon if input was scalar) representing the isopolygon for that distance
 
     """
-    
 
     # make coordinates arrays if user passed non-iterable values
     is_scalar = False
@@ -125,9 +139,13 @@ def calculate_isopolygons_graph(
         isopolygons["ID_" + str(dist_value)] = []
 
         for road_node in road_nodes:
-            nodes_gdf, edges_gdf = _get_poly_nx(road_network, road_node, dist_value, distance_type)
+            nodes_gdf, edges_gdf = _get_poly_nx(
+                road_network, road_node, dist_value, distance_type
+            )
             try:
-                new_iso = new_func(edge_buff, node_buff, nodes_gdf, edges_gdf)
+                new_iso = create_buffer_polygon(
+                    edge_buff, node_buff, nodes_gdf, edges_gdf
+                )
                 isopolygons["ID_" + str(dist_value)].append(new_iso)
                 if is_scalar:
                     isopolygons["ID_" + str(dist_value)] = isopolygons[
@@ -138,15 +156,29 @@ def calculate_isopolygons_graph(
 
     return isopolygons
 
-def new_func(edge_buff, node_buff, nodes_gdf, edges_gdf):
-    n = nodes_gdf.buffer(node_buff).geometry
-    e = edges_gdf.buffer(edge_buff).geometry
-    all_gs = list(n) + list(e)
-    new_iso = gpd.GeoSeries(all_gs).unary_union
-    new_iso = Polygon(new_iso.exterior)
-    return new_iso
 
-@disk_cache('mapbox_cache')
+def create_buffer_polygon(node_buff, edge_buff, nodes_gdf, edges_gdf):
+
+    # creates a circle with radius node_buff around each node
+    disks = nodes_gdf.buffer(node_buff).geometry
+
+    # creates a buffer around each edge. For example, if the edge is a line between
+    # two points, it creates a sort of 2-d "cylinder" of "radius" edge_buff
+    # and semicircles of radius edge_buff at the end points
+    cylinders = edges_gdf.buffer(edge_buff).geometry
+
+    all_geometries = list(disks) + list(cylinders)
+
+    # Merges all_geometries into a single unified geometry, removing overlaps and simplifying the resulting shape
+    geometric_union = gpd.GeoSeries(all_geometries).unary_union
+
+    # Removes any interior boundaries (holes) that geometric_union might have had
+    buffer_polygon = Polygon(geometric_union.exterior)
+
+    return buffer_polygon
+
+
+@disk_cache("mapbox_cache")
 def calculate_isopolygons_Mapbox(
     X: Any,
     Y: Any,
@@ -171,7 +203,7 @@ def calculate_isopolygons_Mapbox(
     elif distance_type == "length":
         contour_type = "contours_meters"
     else:
-        raise Exception("Invalid distance type")    
+        raise Exception("Invalid distance type")
     for idx, coord_pair in enumerate(list(zip(X, Y))):
         request = (
             f"{base_url}mapbox/{route_profile}/{coord_pair[0]},"
