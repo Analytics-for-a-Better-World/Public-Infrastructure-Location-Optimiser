@@ -81,15 +81,34 @@ def _get_poly_pandana(G: pandana.Network, road_node, dist_value, distance_type):
     return nodes_gdf, edges_gdf
 
 
-def calculate_isopolygons_graph(
+def calculate_isopolygons_graph(    
     X: Any,
     Y: Any,
     distance_type: str,
     distance_values: list[int],
-    road_network: Any,
+    road_network: nx.MultiDiGraph,
     edge_buff: float = 0.0005,
     node_buff: float = 0.001,
 ) -> dict:
+    
+    """
+    Catalina, Jan 15 2025:
+
+    The function first finds the nearest network nodes to input coordinates, then
+    constructs polygons representing areas reachable within each specified distance value.
+
+    Since Pandana networks are not implemented, I simplified the function so it supports only NetworkX. 
+    Pandana networks will be implemented elsewhere.
+
+    
+    Returns
+    -------
+    dict
+        Dictionary with keys as "ID_<distance_value>" and values as list of polygons
+        (or single polygon if input was scalar) representing the isopolygon for that distance
+
+    """
+    
 
     # make coordinates arrays if user passed non-iterable values
     is_scalar = False
@@ -98,28 +117,15 @@ def calculate_isopolygons_graph(
         X = [X]
         Y = [Y]
 
-    G = road_network
     isochrone_polys = {}
-    is_networkx = False
-    if isinstance(G, nx.MultiDiGraph):
-        road_nodes = ox.distance.nearest_nodes(G, X, Y)
-        is_networkx = True
-    elif isinstance(G, pandana.Network):
-        raise Exception("Not implemented yet")
-        road_nodes = G.get_node_ids(X, Y, mapping_distance=None)
-        road_nodes = road_nodes.astype(np.intc)
-    else:
-        raise Exception("Invalid network type")
+    road_nodes = ox.distance.nearest_nodes(road_network, X, Y)
 
     # Construct isopolygon for each distance value
     for dist_value in distance_values:
         isochrone_polys["ID_" + str(dist_value)] = []
-        if is_networkx:
-            get_poly_func = _get_poly_nx
-        #        else:
-        #            get_poly_func = _get_poly_pandana
+
         for road_node in road_nodes:
-            nodes_gdf, edges_gdf = _get_poly_nx(G, road_node, dist_value, distance_type)
+            nodes_gdf, edges_gdf = _get_poly_nx(road_network, road_node, dist_value, distance_type)
             try:
                 n = nodes_gdf.buffer(node_buff).geometry
                 e = edges_gdf.buffer(edge_buff).geometry
