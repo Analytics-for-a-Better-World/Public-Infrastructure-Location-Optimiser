@@ -117,30 +117,34 @@ def calculate_isopolygons_graph(
         X = [X]
         Y = [Y]
 
-    isochrone_polys = {}
+    isopolygons = {}
     road_nodes = ox.distance.nearest_nodes(road_network, X, Y)
 
     # Construct isopolygon for each distance value
     for dist_value in distance_values:
-        isochrone_polys["ID_" + str(dist_value)] = []
+        isopolygons["ID_" + str(dist_value)] = []
 
         for road_node in road_nodes:
             nodes_gdf, edges_gdf = _get_poly_nx(road_network, road_node, dist_value, distance_type)
             try:
-                n = nodes_gdf.buffer(node_buff).geometry
-                e = edges_gdf.buffer(edge_buff).geometry
-                all_gs = list(n) + list(e)
-                new_iso = gpd.GeoSeries(all_gs).unary_union
-                new_iso = Polygon(new_iso.exterior)
-                isochrone_polys["ID_" + str(dist_value)].append(new_iso)
+                new_iso = new_func(edge_buff, node_buff, nodes_gdf, edges_gdf)
+                isopolygons["ID_" + str(dist_value)].append(new_iso)
                 if is_scalar:
-                    isochrone_polys["ID_" + str(dist_value)] = isochrone_polys[
+                    isopolygons["ID_" + str(dist_value)] = isopolygons[
                         "ID_" + str(dist_value)
                     ][0]
             except:
                 print(road_node)
 
-    return isochrone_polys
+    return isopolygons
+
+def new_func(edge_buff, node_buff, nodes_gdf, edges_gdf):
+    n = nodes_gdf.buffer(node_buff).geometry
+    e = edges_gdf.buffer(edge_buff).geometry
+    all_gs = list(n) + list(e)
+    new_iso = gpd.GeoSeries(all_gs).unary_union
+    new_iso = Polygon(new_iso.exterior)
+    return new_iso
 
 @disk_cache('mapbox_cache')
 def calculate_isopolygons_Mapbox(
