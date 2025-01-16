@@ -47,34 +47,36 @@ def excluded_node():
     return Point(-122.2315948, 37.768278)
 
 
-def test_excluded_node_is_left_out(nodes_gdf, edges_gdf, excluded_node):
-    """Desired behavior: the node previously excluded because it was
-    too far away is excluded from the resulting polygon"""
+class TestCreatePolygonFromNodesAndEdges:
 
-    poly = create_polygon_from_nodes_and_edges(
-        node_buff=0.00005, edge_buff=0.00005, nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
-    )
+    def test_excluded_node_is_left_out(self, nodes_gdf, edges_gdf, excluded_node):
+        """Desired behavior: the node previously excluded because it was
+        too far away is excluded from the resulting polygon"""
 
-    assert not poly.contains(excluded_node)
+        poly = create_polygon_from_nodes_and_edges(
+            node_buff=0.00005, edge_buff=0.00005, nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
+        )
 
-
-def test_excluded_node_is_back_in(nodes_gdf, edges_gdf, excluded_node):
-    """Undesired behavior: the node previously excluded because it was
-    too far away is included in the resulting polygon. The problem is
-    that buffers are too large"""
-
-    poly = create_polygon_from_nodes_and_edges(
-        node_buff=0.001, edge_buff=0.0005, nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
-    )
-
-    assert poly.contains(excluded_node)
+        assert not poly.contains(excluded_node)
 
 
-def test_with_0_node_buffer(nodes_gdf, edges_gdf):
-    """This should not be a problem because all nodes are connected"""
+    def test_excluded_node_is_back_in(self, nodes_gdf, edges_gdf, excluded_node):
+        """Undesired behavior: the node previously excluded because it was
+        too far away is included in the resulting polygon. The problem is
+        that buffers are too large"""
 
-    poly = create_polygon_from_nodes_and_edges(
-        node_buff=0, edge_buff=0.00005, nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
-    )
+        poly = create_polygon_from_nodes_and_edges(
+            node_buff=0.001, edge_buff=0.0005, nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
+        )
 
-    assert poly.area > 0
+        assert poly.contains(excluded_node)
+
+
+    def test_with_0_node_buffer(self, nodes_gdf, edges_gdf):
+        """This should not be a problem because all nodes are connected"""
+
+        poly = create_polygon_from_nodes_and_edges(
+            node_buff=0, edge_buff=0.00005, nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
+        )
+
+        assert poly.area > 0
