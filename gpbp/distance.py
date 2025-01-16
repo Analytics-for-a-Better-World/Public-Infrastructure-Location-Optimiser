@@ -177,6 +177,7 @@ def create_polygon_from_nodes_and_edges(
     TODO:
     - find appropriate default values for node_buff and edge_buff
     relative to network distances?
+    - why different buff for nodes and edges?
     - this method throws
     AttributeError: 'MultiPolygon' object has no attribute 'exterior'
     if the result of unary_union is two (or more) disconnected Polygons.
@@ -184,6 +185,9 @@ def create_polygon_from_nodes_and_edges(
     make strategy to catch it
     """
 
+    if edge_buff <= 0:
+        raise ValueError("The parameter edge_buff must be greater than 0.")
+    
     # creates a circle with radius node_buff around each node
     disks = nodes_gdf.buffer(node_buff).geometry
 
