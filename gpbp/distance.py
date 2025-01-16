@@ -88,10 +88,9 @@ def calculate_isopolygons_graph(
     distance_type: str,
     distance_values: list[int],
     road_network: nx.MultiDiGraph,
-    edge_buff: float = 0.0005,
     node_buff: float = 0.001,
+    edge_buff: float = 0.0005,
 ) -> dict:
-    
     """
     Catalina, Jan 15 2025:
 
@@ -113,7 +112,7 @@ def calculate_isopolygons_graph(
 
 
     Since Pandana networks are not implemented, I simplified the function so it supports only NetworkX.
-    Pandana networks will be implemented elsewhere.
+    Pandana networks will be implemented elsewhere in the refactoring phase.
 
 
     Returns
@@ -143,10 +142,13 @@ def calculate_isopolygons_graph(
                 road_network, road_node, dist_value, distance_type
             )
             try:
-                new_iso = create_buffer_polygon(
-                    edge_buff, node_buff, nodes_gdf, edges_gdf
+                new_isopolygon = create_polygon_from_nodes_and_edges(
+                    node_buff=node_buff,
+                    edge_buff=edge_buff,
+                    nodes_gdf=nodes_gdf,
+                    edges_gdf=edges_gdf,
                 )
-                isopolygons["ID_" + str(dist_value)].append(new_iso)
+                isopolygons["ID_" + str(dist_value)].append(new_isopolygon)
                 if is_scalar:
                     isopolygons["ID_" + str(dist_value)] = isopolygons[
                         "ID_" + str(dist_value)
@@ -157,7 +159,30 @@ def calculate_isopolygons_graph(
     return isopolygons
 
 
-def create_buffer_polygon(node_buff, edge_buff, nodes_gdf, edges_gdf):
+def create_polygon_from_nodes_and_edges(
+    node_buff: float,
+    edge_buff: float,
+    nodes_gdf: gpd.GeoDataFrame,
+    edges_gdf: gpd.GeoSeries,
+) -> Polygon:
+    """
+    Catalina, Jan 2025:
+
+    This method is sensitive to the values of node_buff and edge_buff.
+    If they are too large relative to the distances between nodes (for
+    example in a walking road network), the buffer could be so large
+    that you end up including areas by mistake (like nodes you had
+    previously excluded).
+
+    TODO:
+    - find appropriate default values for node_buff and edge_buff
+    relative to network distances?
+    - this method throws
+    AttributeError: 'MultiPolygon' object has no attribute 'exterior'
+    if the result of unary_union is two (or more) disconnected Polygons.
+    Figure out when this could happen (could a node be disconnected?) and
+    make strategy to catch it
+    """
 
     # creates a circle with radius node_buff around each node
     disks = nodes_gdf.buffer(node_buff).geometry
