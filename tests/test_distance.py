@@ -4,10 +4,11 @@ from shapely.geometry import Point, LineString
 from gpbp.distance import create_polygon_from_nodes_and_edges
 
 
+
 @pytest.fixture
-def nodes_gdf():
-    nodes_gdf_data = {
-        "id": [5909483619, 5909483625, 5909483636],
+def nodes_gdf() -> gpd.GeoSeries:
+    data = {
+        "osmid": [5909483619, 5909483625, 5909483636],
         "geometry": [
             Point(-122.2314069, 37.7687054),
             Point(-122.231243, 37.7687576),
@@ -15,13 +16,11 @@ def nodes_gdf():
         ],
     }
 
-    return gpd.GeoDataFrame(
-        nodes_gdf_data,
-    ).set_index("id")
+    return gpd.GeoDataFrame(data, crs='EPSG:4326').set_index("osmid")
 
 
 @pytest.fixture
-def edges_gdf():
+def edges_gdf() -> gpd.GeoSeries:
     coordinates_25_to_19 = [(-122.23124, 37.76876), (-122.23141, 37.76871)]
 
     coordinates_19_to_36 = [
@@ -38,8 +37,10 @@ def edges_gdf():
             LineString(coordinates_25_to_19[::-1]),  # edge 5909483619 -> 5909483625
             LineString(coordinates_19_to_36),  # edge 5909483619 -> 5909483636
             LineString(coordinates_19_to_36[::-1]),  # edge 5909483636 -> 5909483619
-        ]
+        ],
+        crs='EPSG:4326'
     )
+
 
 
 @pytest.fixture
