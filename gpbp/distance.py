@@ -183,6 +183,10 @@ def create_polygon_from_nodes_and_edges(
     if the result of unary_union is two (or more) disconnected Polygons.
     Figure out when this could happen (could a node be disconnected?) and
     make strategy to catch it
+    - Tests throw warning:  
+    "UserWarning: Geometry is in a geographic CRS. Results from 'buffer' are likely incorrect. 
+    Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before 
+    this operation."
     """
 
     if edge_buff <= 0:
