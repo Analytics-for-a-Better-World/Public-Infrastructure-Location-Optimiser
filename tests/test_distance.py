@@ -1,5 +1,4 @@
 import geopandas as gpd
-import osmnx as ox
 import pandas as pd
 import pytest
 from shapely.geometry import LineString, Point
@@ -48,8 +47,20 @@ def edges_gdf() -> gpd.GeoSeries:
 
 
 @pytest.fixture
-def excluded_node():
+def excluded_node() -> Point:
+    """Geometry of the node 5909483569"""
     return Point(-122.2315948, 37.768278)
+
+
+@pytest.fixture
+def dataframe_with_lat_and_lon() -> pd.DataFrame:
+
+    points = [
+        (-122.2314069, 37.7687054),  # closest node 19
+        (-122.23124, 37.76876),  # closest node 25
+    ]
+
+    return pd.DataFrame(points, columns=["longitude", "latitude"])
 
 
 class TestCreatePolygonFromNodesAndEdges:
@@ -88,71 +99,79 @@ class TestCreatePolygonFromNodesAndEdges:
         assert poly.area > 0
 
 
-@pytest.fixture
-def dataframe_with_lat_and_lon() -> pd.DataFrame:
-    """Here is how I got the first point:
-
-    I created a Linestring between nodes 19 and 36:
-    line_19_36 = LineString([[-122.2317839, 37.7689584],[-122.2314069, 37.7687054]])
-
-    From Shapely 2.0.6 docs: returns a point interpolated at given distance on a line
-    print(line_interpolate_point(line_19_36, 5))
-
-    The second was done similarly.
-
-    """
-
-    points = [
-        (-122.2314069, 37.7687054),  # closest node 19
-        (-122.23124, 37.76876),  # closest node 25
-    ]
-
-    return pd.DataFrame(points, columns=["longitude", "latitude"])
-
-
 class TestCalculateIsopolygonsGraph:
+
+    @pytest.fixture(autouse=True)
+    def setup(
+        self,
+        load_graphml_file,
+        dataframe_with_lat_and_lon,
+    ):
+        self.isopolygons = calculate_isopolygons_graph(
+            X=dataframe_with_lat_and_lon.longitude.to_list(),
+            Y=dataframe_with_lat_and_lon.latitude.to_list(),
+            distance_type="length",
+            distance_values=[5, 20, 50],
+            road_network=load_graphml_file,
+            node_buff=0.00005,
+            edge_buff=0.00005,
+        )
 
     @pytest.mark.parametrize(
         "load_graphml_file",
         ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
         indirect=True,
     )
-    def test_three(
-        self, load_graphml_file, dataframe_with_lat_and_lon, nodes_gdf, excluded_node
-    ):
+    def test_format(self):
 
-        G = load_graphml_file
+        assert self.isopolygons.shape == (
+            2,
+            3,
+        ), "The output should have two rows (one per point in input dataframe) and three columns (one per distance)"
 
-        isopolygons = calculate_isopolygons_graph(
-            X=dataframe_with_lat_and_lon.longitude.to_list(),
-            Y=dataframe_with_lat_and_lon.latitude.to_list(),
-            distance_type="length",
-            distance_values=[5, 20, 50],
-            road_network=G,
-            node_buff=0.00005,
-            edge_buff=0.00005,
-        )
+        assert list(self.isopolygons.columns) == ["ID_5", "ID_20", "ID_50"]
 
-        assert isopolygons.shape == (2, 3)  # three rows and two columns, one per node
+    @pytest.mark.parametrize(
+        "load_graphml_file",
+        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
+        indirect=True,
+    )
+    def test_nodes_in_isopolygon_5(self, nodes_gdf):
+        """Nodes in isopolygon at distance 5 meters from point (-122.2314069, 37.7687054)"""
 
-        assert list(isopolygons.columns) == ["ID_5", "ID_20", "ID_50"]
-
-        # the only node in this isopolygon is 19
-        assert list(nodes_gdf.geometry.within(isopolygons.loc[0, "ID_5"])) == [
+        assert list(nodes_gdf.geometry.within(self.isopolygons.loc[0, "ID_5"])) == [
             True,
             False,
             False,
-        ]
+        ], "The only node in this isopolygone should be 5909483619"
 
-        # both nodes 19 and 25 are in this isopolygon, but not 36
-        assert list(nodes_gdf.geometry.within(isopolygons.loc[0, "ID_20"])) == [
+    @pytest.mark.parametrize(
+        "load_graphml_file",
+        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
+        indirect=True,
+    )
+    def test_nodes_in_isopolygon_20(self, nodes_gdf):
+        """Nodes in isopolygon at distance 20 meters from point (-122.2314069, 37.7687054)"""
+
+        assert list(nodes_gdf.geometry.within(self.isopolygons.loc[0, "ID_20"])) == [
             True,
             True,
             False,
-        ]
+        ], "Only two nodes, 5909483619 and 5909483625, should be in this isopolygon"
 
-        # nodes 19, 25 and 36 are in this isopolygon
-        assert all(nodes_gdf.geometry.within(isopolygons.loc[0, "ID_50"]))
+    @pytest.mark.parametrize(
+        "load_graphml_file",
+        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
+        indirect=True,
+    )
+    def test_nodes_in_isopolygon_50(self, nodes_gdf, excluded_node):
+        """Nodes in isopolygon at distance 50 meters from point (-122.2314069, 37.7687054)"""
+
+        assert all(
+            nodes_gdf.geometry.within(self.isopolygons.loc[0, "ID_50"])
+        ), "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon"
 
         # node 69 is not in this isopolygon
-        assert not excluded_node.within(isopolygons.loc[0, "ID_50"])
+        assert not excluded_node.within(
+            self.isopolygons.loc[0, "ID_50"]
+        ), "Node 5909483569 should not be in this isopolygon"
