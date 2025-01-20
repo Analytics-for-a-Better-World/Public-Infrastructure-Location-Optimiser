@@ -1,8 +1,8 @@
-import pytest
 import geopandas as gpd
-from shapely.geometry import Point, LineString
-from gpbp.distance import create_polygon_from_nodes_and_edges
+import pytest
+from shapely.geometry import LineString, Point
 
+from gpbp.distance import create_polygon_from_nodes_and_edges
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def nodes_gdf() -> gpd.GeoSeries:
         ],
     }
 
-    return gpd.GeoDataFrame(data, crs='EPSG:4326').set_index("osmid")
+    return gpd.GeoDataFrame(data, crs="EPSG:4326").set_index("osmid")
 
 
 @pytest.fixture
@@ -38,9 +38,8 @@ def edges_gdf() -> gpd.GeoSeries:
             LineString(coordinates_19_to_36),  # edge 5909483619 -> 5909483636
             LineString(coordinates_19_to_36[::-1]),  # edge 5909483636 -> 5909483619
         ],
-        crs='EPSG:4326'
+        crs="EPSG:4326",
     )
-
 
 
 @pytest.fixture
@@ -55,11 +54,13 @@ class TestCreatePolygonFromNodesAndEdges:
         too far away is excluded from the resulting polygon"""
 
         poly = create_polygon_from_nodes_and_edges(
-            node_buff=0.00005, edge_buff=0.00005, nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
+            node_buff=0.00005,
+            edge_buff=0.00005,
+            nodes_gdf=nodes_gdf,
+            edges_gdf=edges_gdf,
         )
 
         assert not poly.contains(excluded_node)
-
 
     def test_excluded_node_is_back_in(self, nodes_gdf, edges_gdf, excluded_node):
         """Undesired behavior: the node previously excluded because it was
@@ -71,7 +72,6 @@ class TestCreatePolygonFromNodesAndEdges:
         )
 
         assert poly.contains(excluded_node)
-
 
     def test_with_0_node_buffer(self, nodes_gdf, edges_gdf):
         """This should not be a problem because all nodes are connected"""

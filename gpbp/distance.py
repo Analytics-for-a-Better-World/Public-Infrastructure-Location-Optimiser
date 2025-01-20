@@ -1,20 +1,19 @@
+import hashlib
 import json
-import requests
-from typing import Any, Union
-from shapely.geometry import Polygon, MultiPolygon, Point, LineString
-import geopandas as gpd
-import pandas as pd
-import numpy as np
-
-import networkx as nx
-import pandana
-import osmnx as ox
-import time
-
 import os
 import pickle
+import time
 from functools import wraps
-import hashlib
+from typing import Any, Union
+
+import geopandas as gpd
+import networkx as nx
+import numpy as np
+import osmnx as ox
+import pandana
+import pandas as pd
+import requests
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
 
 def disk_cache(cache_dir="cache"):
@@ -183,15 +182,16 @@ def create_polygon_from_nodes_and_edges(
     if the result of unary_union is two (or more) disconnected Polygons.
     Figure out when this could happen (could a node be disconnected?) and
     make strategy to catch it
-    - Tests throw warning:  
-    "UserWarning: Geometry is in a geographic CRS. Results from 'buffer' are likely incorrect. 
-    Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before 
+    - Tests throw warning:
+    "UserWarning: Geometry is in a geographic CRS. Results from 'buffer' are likely incorrect.
+    Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before
     this operation."
+    TODO: use osmnx.utils_geo.buffer_geometry(geom, dist) after migration to ox 2
     """
 
     if edge_buff <= 0:
         raise ValueError("The parameter edge_buff must be greater than 0.")
-    
+
     # creates a circle with radius node_buff around each node
     disks = nodes_gdf.buffer(node_buff).geometry
 
