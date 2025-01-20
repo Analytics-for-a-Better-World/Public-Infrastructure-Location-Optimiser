@@ -87,6 +87,28 @@ class TestCreatePolygonFromNodesAndEdges:
         assert poly.area > 0
 
 
+@pytest.fixture
+def dataframe_with_lat_and_lon() -> pd.DataFrame:
+    """Here is how I got the first point:
+
+    I created a Linestring between nodes 19 and 36:
+    line_19_36 = LineString([[-122.2317839, 37.7689584],[-122.2314069, 37.7687054]])
+
+    From Shapely 2.0.6 docs: returns a point interpolated at given distance on a line
+    print(line_interpolate_point(line_19_36, 5))
+
+    The second was done similarly.
+
+    """
+
+    points = [
+        (-122.2314069, 37.7687054),  # closest node 19
+        (-122.23124, 37.76876),  # closest node 25
+    ]
+
+    return pd.DataFrame(points, columns=["longitude", "latitude"])
+
+
 class TestCalculateIsopolygonsGraph:
 
     @pytest.mark.parametrize(
@@ -185,22 +207,13 @@ class TestCalculateIsopolygonsGraph:
         ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
         indirect=True,
     )
-    def test_three(self, load_graphml_file):
-
-        points = gpd.GeoDataFrame(
-            [
-                Point(
-                    -122.2314069, 37.7687054
-                ),  # print(line_interpolate_point(line_19_36, 5)). closest node 19
-                Point(-122.23124, 37.76876),  # closest node 25
-            ]
-        )
+    def test_three(self, load_graphml_file, dataframe_with_lat_and_lon):
 
         G = load_graphml_file
 
         isopolygons = calculate_isopolygons_graph(
-            X=x,
-            Y=y,
+            X=dataframe_with_lat_and_lon.longitude.to_list(),
+            Y=dataframe_with_lat_and_lon.latitude.to_list(),
             distance_type="length",
             distance_values=[5, 20, 50],
             road_network=G,
@@ -210,4 +223,4 @@ class TestCalculateIsopolygonsGraph:
 
         assert isopolygons.shape == (2, 3)  # three rows and two columns, one per node
 
-        isopolygons.loc[0, "ID_5"]
+        # isopolygons.loc[0, "ID_5"]
