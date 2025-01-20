@@ -187,19 +187,14 @@ class TestCalculateIsopolygonsGraph:
     )
     def test_three(self, load_graphml_file):
 
-        """
-        line = LineString(coordinates_25_to_19[::-1])
-        # a_point_in_line = line_interpolate_point(line, 5)"""
-
-        x = [-122.2314069, -122.23124]
-        y = [37.7687054, 37.76876]
-
-        a_point = Point(-122.23124, 37.76876)  # closest node 25  
-
-        points = [
-            Point(-122.2314069, 37.7687054), #print(line_interpolate_point(line_19_36, 5)). closest node 19
-            Point(-122.23124, 37.76876), 
-            ] 
+        points = gpd.GeoDataFrame(
+            [
+                Point(
+                    -122.2314069, 37.7687054
+                ),  # print(line_interpolate_point(line_19_36, 5)). closest node 19
+                Point(-122.23124, 37.76876),  # closest node 25
+            ]
+        )
 
         G = load_graphml_file
 
