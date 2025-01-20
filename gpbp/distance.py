@@ -4,7 +4,7 @@ import os
 import pickle
 import time
 from functools import wraps
-from typing import Any, Union
+from typing import Any
 
 import geopandas as gpd
 import networkx as nx
@@ -89,7 +89,7 @@ def calculate_isopolygons_graph(
     road_network: nx.MultiDiGraph,
     node_buff: float = 0.001,
     edge_buff: float = 0.0005,
-) -> dict:
+) -> pd.DataFrame:
     """
     Catalina, Jan 15 2025:
 
@@ -155,7 +155,9 @@ def calculate_isopolygons_graph(
             except:
                 print(road_node)
 
-    return isopolygons
+    iso_df = pd.DataFrame.from_dict(isopolygons)
+
+    return iso_df
 
 
 def create_polygon_from_nodes_and_edges(
@@ -283,7 +285,7 @@ def population_served(
     iso_gdf = fac_gdf.copy().drop(columns="geometry")
     # Get isopolygons geodataframe
     if strategy == "mapbox":
-        dist_dict = calculate_isopolygons_Mapbox(
+        dist_df = calculate_isopolygons_Mapbox(
             iso_gdf.longitude.to_list(),
             iso_gdf.latitude.to_list(),
             route_mode,
@@ -291,21 +293,20 @@ def population_served(
             distance_values,
             access_token=access_token,
         )
-        dist_df = pd.DataFrame.from_dict(dist_dict)
+        dist_df = pd.DataFrame.from_dict(dist_df)
         iso_gdf = pd.concat(
             [iso_gdf.reset_index(drop=True), dist_df.reset_index(drop=True)], axis=1
         )
     elif strategy == "osm":
         if road_network == None:
             raise Exception("OSM strategy needs a road network")
-        dist_dict = calculate_isopolygons_graph(
+        dist_df = calculate_isopolygons_graph(
             iso_gdf.longitude.to_list(),
             iso_gdf.latitude.to_list(),
             distance_type,
             distance_values,
             road_network,
         )
-        dist_df = pd.DataFrame.from_dict(dist_dict)
         iso_gdf = pd.concat(
             [iso_gdf.reset_index(drop=True), dist_df.reset_index(drop=True)], axis=1
         )
