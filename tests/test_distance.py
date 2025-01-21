@@ -108,8 +108,7 @@ class TestCalculateIsopolygonsGraph:
         dataframe_with_lat_and_lon,
     ):
         self.isopolygons = calculate_isopolygons_graph(
-            X=dataframe_with_lat_and_lon.longitude.to_list(),
-            Y=dataframe_with_lat_and_lon.latitude.to_list(),
+            facilities_df=dataframe_with_lat_and_lon,
             distance_type="length",
             distance_values=[5, 20, 50],
             road_network=load_graphml_file,
@@ -171,7 +170,6 @@ class TestCalculateIsopolygonsGraph:
             nodes_gdf.geometry.within(self.isopolygons.loc[0, "ID_50"])
         ), "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon"
 
-        # node 69 is not in this isopolygon
         assert not excluded_node.within(
             self.isopolygons.loc[0, "ID_50"]
         ), "Node 5909483569 should not be in this isopolygon"

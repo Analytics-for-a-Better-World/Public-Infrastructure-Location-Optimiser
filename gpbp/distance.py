@@ -82,8 +82,7 @@ def _get_poly_pandana(G: pandana.Network, road_node, dist_value, distance_type):
 
 
 def calculate_isopolygons_graph(
-    X: Any,
-    Y: Any,
+    facilities_df: pd.DataFrame,
     distance_type: str,
     distance_values: list[int],
     road_network: nx.MultiDiGraph,
@@ -120,14 +119,13 @@ def calculate_isopolygons_graph(
         Dictionary with keys as "ID_<distance_value>" and values as list of polygons
         (or single polygon if input was scalar) representing the isopolygon for that distance
 
+    Args:
+        facilities_df:
+
     """
 
-    # make coordinates arrays if user passed non-iterable values
-    is_scalar = False
-    if not (hasattr(X, "__iter__") and hasattr(Y, "__iter__")):
-        is_scalar = True
-        X = [X]
-        Y = [Y]
+    X = facilities_df.longitude.values
+    Y = facilities_df.latitude.values
 
     isopolygons = {}
     road_nodes = ox.distance.nearest_nodes(road_network, X, Y)
@@ -148,10 +146,6 @@ def calculate_isopolygons_graph(
                     edges_gdf=edges_gdf,
                 )
                 isopolygons["ID_" + str(dist_value)].append(new_isopolygon)
-                if is_scalar:
-                    isopolygons["ID_" + str(dist_value)] = isopolygons[
-                        "ID_" + str(dist_value)
-                    ][0]
             except:
                 print(road_node)
 
@@ -301,11 +295,7 @@ def population_served(
         if road_network == None:
             raise Exception("OSM strategy needs a road network")
         dist_df = calculate_isopolygons_graph(
-            iso_gdf.longitude.to_list(),
-            iso_gdf.latitude.to_list(),
-            distance_type,
-            distance_values,
-            road_network,
+            iso_gdf, distance_type, distance_values, road_network
         )
         iso_gdf = pd.concat(
             [iso_gdf.reset_index(drop=True), dist_df.reset_index(drop=True)], axis=1
