@@ -108,21 +108,15 @@ def calculate_isopolygons_graph(
 
     represents the area (Polygon) reachable from point (X,Y) within 30 minutes.
 
+    TODO:
+      - handle try-except better
+      - remove node_buff and edge_buff as parameters. They are only used in this method because the default in
+      create_polygon_from_nodes_and_edges is too large for the distances in the test data)
+      - remove this comment and add a proper docstring
+
 
     Since Pandana networks are not implemented, I simplified the function so it supports only NetworkX.
     Pandana networks will be implemented elsewhere in the refactoring phase.
-
-
-    Returns
-    -------
-    dict
-        Dictionary with keys as "ID_<distance_value>" and values as list of polygons
-        (or single polygon if input was scalar) representing the isopolygon for that distance
-
-    Args:
-        node_buff:
-        edge_buff:
-        facilities_df:
 
     """
 

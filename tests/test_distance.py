@@ -6,6 +6,7 @@ from shapely.geometry import LineString, Point
 from gpbp.distance import (
     calculate_isopolygons_graph,
     create_polygon_from_nodes_and_edges,
+    population_served,
 )
 
 
@@ -109,7 +110,7 @@ class TestCalculateIsopolygonsGraph:
     ):
         """
         Here I'm deliberately choosing to override the defaults for node_buff and edge_buff
-        so the tests pass, otehrwise the tests would fail because the buffers are too large
+        so the tests pass, otherwise the tests would fail because the buffers are too large
         """
         self.isopolygons = calculate_isopolygons_graph(
             facilities_df=dataframe_with_lat_and_lon,
