@@ -70,10 +70,10 @@ class TestCreatePolygonFromNodesAndEdges:
         too far away is excluded from the resulting polygon"""
 
         poly = create_polygon_from_nodes_and_edges(
-            node_buff=0.00005,
-            edge_buff=0.00005,
             nodes_gdf=nodes_gdf,
             edges_gdf=edges_gdf,
+            node_buff=0.00005,
+            edge_buff=0.00005,
         )
 
         assert not poly.contains(excluded_node)
@@ -84,7 +84,7 @@ class TestCreatePolygonFromNodesAndEdges:
         that buffers are too large"""
 
         poly = create_polygon_from_nodes_and_edges(
-            node_buff=0.001, edge_buff=0.0005, nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
+            nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
         )
 
         assert poly.contains(excluded_node)
@@ -93,7 +93,7 @@ class TestCreatePolygonFromNodesAndEdges:
         """This should not be a problem because all nodes are connected"""
 
         poly = create_polygon_from_nodes_and_edges(
-            node_buff=0, edge_buff=0.00005, nodes_gdf=nodes_gdf, edges_gdf=edges_gdf
+            nodes_gdf=nodes_gdf, edges_gdf=edges_gdf, node_buff=0, edge_buff=0.00005
         )
 
         assert poly.area > 0
@@ -107,6 +107,10 @@ class TestCalculateIsopolygonsGraph:
         load_graphml_file,
         dataframe_with_lat_and_lon,
     ):
+        """
+        Here I'm deliberately choosing to override the defaults for node_buff and edge_buff
+        so the tests pass, otehrwise the tests would fail because the buffers are too large
+        """
         self.isopolygons = calculate_isopolygons_graph(
             facilities_df=dataframe_with_lat_and_lon,
             distance_type="length",
@@ -142,7 +146,7 @@ class TestCalculateIsopolygonsGraph:
             True,
             False,
             False,
-        ], "The only node in this isopolygone should be 5909483619"
+        ], "The only node in this isopolygon should be 5909483619"
 
     @pytest.mark.parametrize(
         "load_graphml_file",

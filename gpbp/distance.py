@@ -86,8 +86,8 @@ def calculate_isopolygons_graph(
     distance_type: str,
     distance_values: list[int],
     road_network: nx.MultiDiGraph,
-    node_buff: float = 0.001,
-    edge_buff: float = 0.0005,
+    node_buff: float,
+    edge_buff: float,
 ) -> pd.DataFrame:
     """
     Catalina, Jan 15 2025:
@@ -120,15 +120,16 @@ def calculate_isopolygons_graph(
         (or single polygon if input was scalar) representing the isopolygon for that distance
 
     Args:
+        node_buff:
+        edge_buff:
         facilities_df:
 
     """
 
-    X = facilities_df.longitude.values
-    Y = facilities_df.latitude.values
-
     isopolygons = {}
-    road_nodes = ox.distance.nearest_nodes(road_network, X, Y)
+    road_nodes = ox.distance.nearest_nodes(
+        road_network, X=facilities_df.longitude.values, Y=facilities_df.latitude.values
+    )
 
     # Construct isopolygon for each distance value
     for dist_value in distance_values:
@@ -140,10 +141,10 @@ def calculate_isopolygons_graph(
             )
             try:
                 new_isopolygon = create_polygon_from_nodes_and_edges(
-                    node_buff=node_buff,
-                    edge_buff=edge_buff,
                     nodes_gdf=nodes_gdf,
                     edges_gdf=edges_gdf,
+                    node_buff=node_buff,
+                    edge_buff=edge_buff,
                 )
                 isopolygons["ID_" + str(dist_value)].append(new_isopolygon)
             except:
@@ -155,10 +156,10 @@ def calculate_isopolygons_graph(
 
 
 def create_polygon_from_nodes_and_edges(
-    node_buff: float,
-    edge_buff: float,
     nodes_gdf: gpd.GeoDataFrame,
     edges_gdf: gpd.GeoSeries,
+    node_buff: float = 0.001,
+    edge_buff: float = 0.0005,
 ) -> Polygon:
     """
     Catalina, Jan 2025:
@@ -295,7 +296,7 @@ def population_served(
         if road_network == None:
             raise Exception("OSM strategy needs a road network")
         dist_df = calculate_isopolygons_graph(
-            iso_gdf, distance_type, distance_values, road_network
+            iso_gdf, distance_type, distance_values, road_network, 0.001, 0.0005
         )
         iso_gdf = pd.concat(
             [iso_gdf.reset_index(drop=True), dist_df.reset_index(drop=True)], axis=1
