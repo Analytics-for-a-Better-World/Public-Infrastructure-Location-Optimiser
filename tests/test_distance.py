@@ -1,4 +1,5 @@
 import geopandas as gpd
+import osmnx as ox
 import pandas as pd
 import pytest
 from shapely.geometry import LineString, Point
@@ -6,7 +7,6 @@ from shapely.geometry import LineString, Point
 from gpbp.distance import (
     calculate_isopolygons_graph,
     create_polygon_from_nodes_and_edges,
-    population_served,
 )
 
 
@@ -105,27 +105,24 @@ class TestCalculateIsopolygonsGraph:
     @pytest.fixture(autouse=True)
     def setup(
         self,
-        load_graphml_file,
         dataframe_with_lat_and_lon,
     ):
         """
         Here I'm deliberately choosing to override the defaults for node_buff and edge_buff
         so the tests pass, otherwise the tests would fail because the buffers are too large
         """
+
         self.isopolygons = calculate_isopolygons_graph(
             facilities_df=dataframe_with_lat_and_lon,
             distance_type="length",
             distance_values=[5, 20, 50],
-            road_network=load_graphml_file,
+            road_network=ox.load_graphml(
+                "tests/test_data/walk_network_4_nodes_6_edges.graphml"
+            ),
             node_buff=0.00005,
             edge_buff=0.00005,
         )
 
-    @pytest.mark.parametrize(
-        "load_graphml_file",
-        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-        indirect=True,
-    )
     def test_format(self):
 
         assert self.isopolygons.shape == (
@@ -135,11 +132,6 @@ class TestCalculateIsopolygonsGraph:
 
         assert list(self.isopolygons.columns) == ["ID_5", "ID_20", "ID_50"]
 
-    @pytest.mark.parametrize(
-        "load_graphml_file",
-        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-        indirect=True,
-    )
     def test_nodes_in_isopolygon_5(self, nodes_gdf):
         """Nodes in isopolygon at distance 5 meters from point (-122.2314069, 37.7687054)"""
 
@@ -149,11 +141,6 @@ class TestCalculateIsopolygonsGraph:
             False,
         ], "The only node in this isopolygon should be 5909483619"
 
-    @pytest.mark.parametrize(
-        "load_graphml_file",
-        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-        indirect=True,
-    )
     def test_nodes_in_isopolygon_20(self, nodes_gdf):
         """Nodes in isopolygon at distance 20 meters from point (-122.2314069, 37.7687054)"""
 
@@ -163,11 +150,6 @@ class TestCalculateIsopolygonsGraph:
             False,
         ], "Only two nodes, 5909483619 and 5909483625, should be in this isopolygon"
 
-    @pytest.mark.parametrize(
-        "load_graphml_file",
-        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-        indirect=True,
-    )
     def test_nodes_in_isopolygon_50(self, nodes_gdf, excluded_node):
         """Nodes in isopolygon at distance 50 meters from point (-122.2314069, 37.7687054)"""
 
