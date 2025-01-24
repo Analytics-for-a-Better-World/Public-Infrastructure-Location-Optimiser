@@ -290,7 +290,12 @@ def population_served(
         if road_network == None:
             raise Exception("OSM strategy needs a road network")
         dist_df = calculate_isopolygons_graph(
-            iso_gdf, distance_type, distance_values, road_network, 0.001, 0.0005
+            facilities_df=iso_gdf,
+            distance_type=distance_type,
+            distance_values=distance_values,
+            road_network=road_network,
+            node_buff=0.001,
+            edge_buff=0.0005,
         )
         iso_gdf = pd.concat(
             [iso_gdf.reset_index(drop=True), dist_df.reset_index(drop=True)], axis=1
