@@ -120,33 +120,35 @@ def calculate_isopolygons_graph(
 
     """
 
-    isopolygons = {}
     road_nodes = ox.distance.nearest_nodes(
         road_network, X=facilities_df.longitude.values, Y=facilities_df.latitude.values
     )
 
+    isopolygons = pd.DataFrame()
+
     # Construct isopolygon for each distance value
     for dist_value in distance_values:
-        isopolygons["ID_" + str(dist_value)] = []
 
         for road_node in road_nodes:
+
             nodes_gdf, edges_gdf = _get_poly_nx(
                 road_network, road_node, dist_value, distance_type
             )
+
             try:
+
                 new_isopolygon = create_polygon_from_nodes_and_edges(
                     nodes_gdf=nodes_gdf,
                     edges_gdf=edges_gdf,
                     node_buff=node_buff,
                     edge_buff=edge_buff,
                 )
-                isopolygons["ID_" + str(dist_value)].append(new_isopolygon)
-            except:
-                print(road_node)
+                isopolygons.loc[road_node, "ID_" + str(dist_value)] = new_isopolygon
 
-    iso_df = pd.DataFrame.from_dict(isopolygons)
+            except ValueError:
+                continue
 
-    return iso_df
+    return isopolygons
 
 
 def create_polygon_from_nodes_and_edges(

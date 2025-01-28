@@ -2,6 +2,7 @@ import geopandas as gpd
 import osmnx as ox
 import pandas as pd
 import pytest
+from pandas import testing as tm
 from shapely.geometry import LineString, Point
 
 from gpbp.distance import (
@@ -128,35 +129,65 @@ class TestCalculateIsopolygonsGraph:
         assert self.isopolygons.shape == (
             2,
             3,
-        ), "The output should have two rows (one per point in input dataframe) and three columns (one per distance)"
+        ), "The output should have two rows (one per point in road_nodes) and three columns (one per distance)"
 
         assert list(self.isopolygons.columns) == ["ID_5", "ID_20", "ID_50"]
 
-    def test_nodes_in_isopolygon_5(self, nodes_gdf):
-        """Nodes in isopolygon at distance 5 meters from point (-122.2314069, 37.7687054)"""
+        # Node 5909483636 was kicked out in .nearest_nodes()
+        assert list(self.isopolygons.index) == [5909483619, 5909483625]
 
-        assert list(nodes_gdf.geometry.within(self.isopolygons.loc[0, "ID_5"])) == [
+    def test_nodes_in_isopolygon_5909483619_5(self, nodes_gdf):
+
+        # The only node less than 5m away from 5909483619 is itself
+        assert list(
+            nodes_gdf.geometry.within(self.isopolygons.loc[5909483619, "ID_5"])
+        ) == [
             True,
             False,
             False,
         ], "The only node in this isopolygon should be 5909483619"
 
-    def test_nodes_in_isopolygon_20(self, nodes_gdf):
-        """Nodes in isopolygon at distance 20 meters from point (-122.2314069, 37.7687054)"""
+    def test_no_edges_in_isopolygon_5909483619_5(self, edges_gdf):
 
-        assert list(nodes_gdf.geometry.within(self.isopolygons.loc[0, "ID_20"])) == [
+        # Since the only node less than 5m away from 5909483619 is itself, there
+        # are no edges from the road network in this isopolygon
+
+        assert not any(
+            edges_gdf.within(self.isopolygons.loc[5909483619, "ID_5"])
+        ), "There should be no edges in this isopolygon"
+
+    def test_nodes_in_isopolygons_20(self, nodes_gdf):
+
+        # converting from series to geoseries so we can use .within() function
+        isopolygons_20 = gpd.GeoSeries(self.isopolygons.loc[:, "ID_20"])
+
+        is_node_in_isopolygons_20 = pd.Series(
+            [True, True, False], index=[5909483619, 5909483625, 5909483636]
+        )
+
+        tm.assert_series_equal(
+            nodes_gdf.geometry.within(isopolygons_20), is_node_in_isopolygons_20
+        )
+
+    def test_nodes_in_isopolygon_5909483619_50(self, nodes_gdf, excluded_node):
+
+        # Nodes 5909483619, 5909483625 and 5909483636 are all less than 50m away from 5909483619
+        assert all(
+            nodes_gdf.geometry.within(self.isopolygons.loc[5909483619, "ID_50"])
+        ), "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon"
+
+        # Node 5909483569 is more than 50m away from 5909483619
+        assert not excluded_node.within(
+            self.isopolygons.loc[5909483619, "ID_50"]
+        ), "Node 5909483569 should not be in this isopolygon"
+
+    def test_nodes_in_isopolygon_5909483625_50(self, nodes_gdf):
+
+        # Node 5909483636 is more than 50m away from node 5909483625
+        assert list(
+            nodes_gdf.geometry.within(self.isopolygons.loc[5909483625, "ID_50"])
+        ) == [
             True,
             True,
             False,
-        ], "Only two nodes, 5909483619 and 5909483625, should be in this isopolygon"
-
-    def test_nodes_in_isopolygon_50(self, nodes_gdf, excluded_node):
-        """Nodes in isopolygon at distance 50 meters from point (-122.2314069, 37.7687054)"""
-
-        assert all(
-            nodes_gdf.geometry.within(self.isopolygons.loc[0, "ID_50"])
-        ), "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon"
-
-        assert not excluded_node.within(
-            self.isopolygons.loc[0, "ID_50"]
-        ), "Node 5909483569 should not be in this isopolygon"
+        ], "Nodes 5909483619 and 5909483625 should be in this isopolygon, but 5909483636 should not"
