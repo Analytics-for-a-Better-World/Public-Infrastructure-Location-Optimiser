@@ -138,13 +138,12 @@ class TestCalculateIsopolygonsGraph:
 
     def test_nodes_in_isopolygon_5909483619_5(self, nodes_gdf):
 
-        # The only node less than 5m away from 5909483619 is itself
-        assert list(
-            nodes_gdf.geometry.within(self.isopolygons.loc[5909483619, "ID_5"])
-        ) == [
-            True,
-            False,
-            False,
+        node_is_within_isopolygon = nodes_gdf.geometry.within(
+            self.isopolygons.loc[5909483619, "ID_5"]
+        )
+
+        assert list(nodes_gdf[node_is_within_isopolygon].index) == [
+            5909483619
         ], "The only node in this isopolygon should be 5909483619"
 
     def test_no_edges_in_isopolygon_5909483619_5(self, edges_gdf):
@@ -183,11 +182,13 @@ class TestCalculateIsopolygonsGraph:
 
     def test_nodes_in_isopolygon_5909483625_50(self, nodes_gdf):
 
+        node_is_within_isopolygon = nodes_gdf.geometry.within(
+            self.isopolygons.loc[5909483625, "ID_50"]
+        )
+
         # Node 5909483636 is more than 50m away from node 5909483625
-        assert list(
-            nodes_gdf.geometry.within(self.isopolygons.loc[5909483625, "ID_50"])
-        ) == [
-            True,
-            True,
-            False,
+
+        assert list(nodes_gdf[node_is_within_isopolygon].index) == [
+            5909483619,
+            5909483625,
         ], "Nodes 5909483619 and 5909483625 should be in this isopolygon, but 5909483636 should not"
